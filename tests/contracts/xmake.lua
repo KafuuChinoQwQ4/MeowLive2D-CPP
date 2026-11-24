@@ -1,0 +1,6 @@
+target("meowlive-protocol-contracts")
+    set_kind("binary")
+    set_default(false)
+    add_files("protocol_v3.cpp")
+    add_deps("meowlive-protocol")
+    add_tests("protocol_v3")

@@ -1,0 +1,5 @@
+target("meowlive-desktop-runtime")
+    add_rules("qt.static")
+    add_frameworks("QtNetwork", "QtWebSockets")
+    add_files("*.cppm", "*/*.cppm", {public = true})
+    add_deps("meowlive-protocol")

@@ -1,0 +1,5 @@
+target("meowlive-desktop")
+    add_rules("qt.widgetapp")
+    add_frameworks("QtNetwork", "QtWebSockets", "QtEntryPoint")
+    add_files("main.cpp", "ui/*.cppm", "services/*.cppm")
+    add_deps("meowlive-desktop-runtime")

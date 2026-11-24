@@ -1,0 +1,14 @@
+# Copy to server.toml in the data directory, or pass --config PATH.
+[server]
+listen_address = "127.0.0.1:19601"
+allowed_origins = ["http://127.0.0.1:1420", "http://localhost:1420", "http://tauri.localhost"]
+queue_capacity = 8
+history_limit = 50
+
+[auth]
+enabled = false
+admin_token_env = "MEOWLIVE_ADMIN_TOKEN"
+device_token_env = "MEOWLIVE_DEVICE_TOKEN"
+session_lifetime_seconds = 28800
+# admin_token_file = "admin.token"
+# device_token_file = "device.token"

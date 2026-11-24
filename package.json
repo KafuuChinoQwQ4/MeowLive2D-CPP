@@ -1,0 +1,9 @@
+{
+  "name": "meowlive-cpp-tooling",
+  "private": true,
+  "scripts": {
+    "tree:update": "node scripts/directory-tree.mjs --write",
+    "tree:check": "node scripts/directory-tree.mjs --check",
+    "test:tooling": "node --test scripts/directory-tree.test.mjs"
+  }
+}

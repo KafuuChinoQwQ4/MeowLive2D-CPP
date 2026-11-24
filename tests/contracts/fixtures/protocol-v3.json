@@ -1,0 +1,158 @@
+{
+  "control": {
+    "client_completed": {
+      "receipt": {
+        "error": null,
+        "generation": 1,
+        "status": "completed",
+        "utterance_id": "speech-1"
+      },
+      "type": "receipt"
+    },
+    "client_hello": {
+      "protocol_version": 3,
+      "type": "hello"
+    },
+    "client_started": {
+      "receipt": {
+        "error": null,
+        "generation": 1,
+        "status": "started",
+        "utterance_id": "speech-1"
+      },
+      "type": "receipt"
+    },
+    "server_hello": {
+      "bridge_id": "bridge-1",
+      "generation": 1,
+      "protocol_version": 3,
+      "session_id": "session-1",
+      "type": "hello"
+    },
+    "server_speak": {
+      "format": {
+        "channels": 1,
+        "sample_rate": 32000
+      },
+      "generation": 1,
+      "type": "speak",
+      "utterance_id": "speech-1"
+    },
+    "server_stop": {
+      "generation": 2,
+      "type": "stop"
+    }
+  },
+  "http": {
+    "GET /api/health after pairing": {
+      "body": {
+        "bridge_connected": true,
+        "protocol_version": 3,
+        "service": "meowlive"
+      },
+      "status": 200
+    },
+    "GET /api/health before pairing": {
+      "body": {
+        "bridge_connected": false,
+        "protocol_version": 3,
+        "service": "meowlive"
+      },
+      "status": 200
+    },
+    "GET /api/status completed": {
+      "body": {
+        "bridge_connected": true,
+        "generation": 1,
+        "protocol_version": 3,
+        "session_id": "session-1",
+        "speeches": [
+          {
+            "error": null,
+            "generation": 1,
+            "id": "speech-1",
+            "status": "completed",
+            "text": "跨端闭环",
+            "voice_id": "default"
+          }
+        ]
+      },
+      "status": 200
+    },
+    "GET /ws/audio invalid pair": {
+      "body": {
+        "code": "invalid_pair",
+        "message": "音频连接与当前执行端不匹配"
+      },
+      "status": 409
+    },
+    "GET /ws/audio occupied": {
+      "body": {
+        "code": "audio_busy",
+        "message": "音频连接已配对"
+      },
+      "status": 409
+    },
+    "GET /ws/audio upgrade": 101,
+    "GET /ws/control occupied": {
+      "body": {
+        "code": "bridge_busy",
+        "message": "已有执行端连接"
+      },
+      "status": 409
+    },
+    "GET /ws/control upgrade": 101,
+    "POST /api/speech accepted": {
+      "body": {
+        "error": null,
+        "generation": 1,
+        "id": "speech-1",
+        "status": "queued",
+        "text": "跨端闭环",
+        "voice_id": "default"
+      },
+      "status": 202
+    },
+    "POST /api/speech before pairing": {
+      "body": {
+        "code": "bridge_disconnected",
+        "message": "desktop executor is not connected"
+      },
+      "status": 409
+    },
+    "POST /api/speech missing voice_id": {
+      "body": {
+        "code": "invalid_request",
+        "message": "需要 text 和 voice_id 字符串"
+      },
+      "status": 400
+    },
+    "POST /api/speech request": {
+      "text": "跨端闭环",
+      "voice_id": "default"
+    },
+    "POST /api/stop": {
+      "body": {
+        "bridge_connected": true,
+        "generation": 2,
+        "protocol_version": 3,
+        "session_id": "session-1",
+        "speeches": [
+          {
+            "error": null,
+            "generation": 1,
+            "id": "speech-1",
+            "status": "completed",
+            "text": "跨端闭环",
+            "voice_id": "default"
+          }
+        ]
+      },
+      "status": 200
+    }
+  },
+  "pcm": {
+    "loopback_frame_hex": "4d 4c 50 43 03 00 01 00 01 00 00 00 00 00 00 00 08 00 04 00 00 00 73 70 65 65 63 68 2d 31 01 00 ff ff 00 00 00 00",
+    "signed_limits_frame_hex": "4d 4c 50 43 03 00 01 00 07 00 00 00 02 00 00 00 01 00 04 00 00 00 61 00 80 ff ff 00 00 ff 7f"
+  }
+}
