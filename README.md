@@ -33,6 +33,15 @@ xmake build meowlive-transport-integration
 xmake run meowlive-transport-integration --rust ../MeowLive2D/target/debug/meowlive-server
 ```
 
+阶段 1.5 播报基线使用 Windows 原生测量程序。先用 Windows 目标配置构建，再在有默认播放设备的 Windows 环境运行，将旧版 Rust 服务和执行端的 EXE 路径作为参数传入。程序默认测量五轮，将延迟、工作集和 CPU 时间输出为 JSON。
+
+```powershell
+# 构建命令使用 Windows 目标配置
+xmake build meowlive-playback-baseline
+# 在 Windows 上从测试目录运行
+.\meowlive-playback-baseline.exe .\meowlive-server.exe .\meowlive-client.exe
+```
+
 ## 本机连接
 
 服务默认监听 `127.0.0.1:19601`，从 Windows 的 `%LOCALAPPDATA%\MeowLive2D\server.toml` 读取配置。可用 `--data-dir`、`MEOWLIVE_DATA_DIR` 指定数据目录，用 `--config` 指定 TOML。日志和上传暂存目录位于数据目录内。桌面端可通过 `MEOWLIVE_SERVER_URL` 指定服务地址。开启鉴权后，桌面端使用设备凭据建立双通道，管理员在窗口中单独登录。[服务配置样例](config/server.example.toml)

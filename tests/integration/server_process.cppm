@@ -7,6 +7,7 @@ module;
 #define NOMINMAX
 #include <winsock2.h>
 #include <windows.h>
+#include <psapi.h>
 #include <cstdint>
 #include <exception>
 #include <filesystem>
@@ -66,8 +67,12 @@ namespace meowlive::tests::process
         throw std::runtime_error("Cannot create integration test directory");
     }
 
-    struct TestDirectory
+    export struct TestDirectory
     {
+        TestDirectory() = default;
+        TestDirectory(const TestDirectory&) = delete;
+        TestDirectory& operator=(const TestDirectory&) = delete;
+
         const std::filesystem::path path = create_test_directory();
 
         ~TestDirectory()
@@ -77,7 +82,7 @@ namespace meowlive::tests::process
         }
     };
 
-    std::uint16_t available_loopback_port()
+    export std::uint16_t available_loopback_port()
     {
 #if defined(_WIN32)
         ::WSADATA winsock{};
@@ -118,7 +123,7 @@ namespace meowlive::tests::process
         return ::ntohs(address.sin_port);
     }
 
-    void write_file(const std::filesystem::path& path, std::string_view contents)
+    export void write_file(const std::filesystem::path& path, std::string_view contents)
     {
         std::ofstream file;
         file.exceptions(std::ios::failbit | std::ios::badbit);
@@ -148,7 +153,20 @@ namespace meowlive::tests::process
         write_file(path / "server.toml", configuration);
     }
 
-    class ChildProcess
+#if defined(_WIN32)
+    export struct ProcessMetrics
+    {
+        double cpu_seconds;
+        std::uint64_t working_set_bytes;
+    };
+
+    std::uint64_t file_time_ticks(const ::FILETIME& time)
+    {
+        return (static_cast<std::uint64_t>(time.dwHighDateTime) << 32) | time.dwLowDateTime;
+    }
+#endif
+
+    export class ChildProcess
     {
     public:
         ChildProcess() = default;
@@ -161,18 +179,25 @@ namespace meowlive::tests::process
         }
 
         void start(const std::filesystem::path& executable, const std::filesystem::path& directory,
-                   bool rust)
+                   const std::filesystem::path& config_file, bool pass_data_dir = false,
+                   const std::filesystem::path& log_file = "server.log")
         {
+            const auto program_path = std::filesystem::canonical(executable);
 #if defined(_WIN32)
+            if (process_ != nullptr)
+            {
+                throw std::logic_error("Test process has already started");
+            }
             // Windows supports wide paths and forbids quotes in filenames.
-            auto command = L"\"" + executable.native() + L"\" --config server.toml";
-            if (!rust)
+            auto command =
+                L"\"" + program_path.native() + L"\" --config \"" + config_file.native() + L"\"";
+            if (pass_data_dir)
             {
                 command += L" --data-dir data";
             }
             ::SECURITY_ATTRIBUTES inheritable{sizeof(::SECURITY_ATTRIBUTES), nullptr, TRUE};
             const auto log =
-                ::CreateFileW((directory / "server.log").c_str(), GENERIC_WRITE, FILE_SHARE_READ,
+                ::CreateFileW((directory / log_file).c_str(), GENERIC_WRITE, FILE_SHARE_READ,
                               &inheritable, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, nullptr);
             const auto input =
                 ::CreateFileW(L"NUL", GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE,
@@ -185,7 +210,7 @@ namespace meowlive::tests::process
             startup.hStdError = log;
             ::PROCESS_INFORMATION information{};
             const bool started = log != INVALID_HANDLE_VALUE && input != INVALID_HANDLE_VALUE &&
-                                 ::CreateProcessW(executable.c_str(), command.data(), nullptr,
+                                 ::CreateProcessW(program_path.c_str(), command.data(), nullptr,
                                                   nullptr, TRUE, CREATE_NO_WINDOW, nullptr,
                                                   directory.c_str(), &startup, &information);
             const auto error = ::GetLastError();
@@ -200,25 +225,30 @@ namespace meowlive::tests::process
             if (!started)
             {
                 throw std::runtime_error(
-                    std::format("Cannot launch test server (Win32 {})", error));
+                    std::format("Cannot launch test process (Win32 {})", error));
             }
             ::CloseHandle(information.hThread);
             process_ = information.hProcess;
 #else
-            auto program = executable.native();
+            if (process_ > 0)
+            {
+                throw std::logic_error("Test process has already started");
+            }
+            auto program = program_path.native();
             auto working_directory = directory.native();
             char config_option[] = "--config";
-            char config[] = "server.toml";
+            auto config = config_file.native();
             char data_option[] = "--data-dir";
             char data[] = "data";
-            char* arguments[]{program.data(), config_option, config, rust ? nullptr : data_option,
+            char* arguments[]{program.data(), config_option,
+                              config.data(),  pass_data_dir ? data_option : nullptr,
                               data,           nullptr};
-            const auto log_path = (directory / "server.log").native();
+            const auto log_path = (directory / log_file).native();
             const auto log =
                 ::open(log_path.c_str(), O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC, 0600);
             if (log < 0)
             {
-                throw std::runtime_error("Cannot open the test server log");
+                throw std::runtime_error("Cannot open the test process log");
             }
             const auto child = ::fork();
             if (child == 0)
@@ -234,7 +264,7 @@ namespace meowlive::tests::process
             ::close(log);
             if (child < 0)
             {
-                throw std::runtime_error("Cannot launch test server");
+                throw std::runtime_error("Cannot launch test process");
             }
             process_ = child;
 #endif
@@ -251,7 +281,7 @@ namespace meowlive::tests::process
             DWORD status{};
             if (state == WAIT_OBJECT_0 && ::GetExitCodeProcess(process_, &status))
             {
-                throw std::runtime_error(std::format("Test server exited with code {}", status));
+                throw std::runtime_error(std::format("Test process exited with code {}", status));
             }
 #else
             ::siginfo_t information{};
@@ -265,14 +295,33 @@ namespace meowlive::tests::process
                 if (information.si_code == CLD_EXITED)
                 {
                     throw std::runtime_error(
-                        std::format("Test server exited with code {}", information.si_status));
+                        std::format("Test process exited with code {}", information.si_status));
                 }
                 throw std::runtime_error(
-                    std::format("Test server terminated with signal {}", information.si_status));
+                    std::format("Test process terminated with signal {}", information.si_status));
             }
 #endif
-            throw std::runtime_error("Cannot determine the test server's process state");
+            throw std::runtime_error("Cannot determine the test process state");
         }
+
+#if defined(_WIN32)
+        meowlive::tests::process::ProcessMetrics metrics() const
+        {
+            assert_running();
+            ::FILETIME created{}, exited{}, kernel{}, user{};
+            ::PROCESS_MEMORY_COUNTERS memory{};
+            memory.cb = sizeof(memory);
+            if (!::GetProcessTimes(process_, &created, &exited, &kernel, &user) ||
+                !::K32GetProcessMemoryInfo(process_, &memory, sizeof(memory)))
+            {
+                throw std::runtime_error(
+                    std::format("Cannot sample test process metrics (Win32 {})", ::GetLastError()));
+            }
+            const auto cpu_ticks = meowlive::tests::process::file_time_ticks(kernel) +
+                                   meowlive::tests::process::file_time_ticks(user);
+            return {static_cast<double>(cpu_ticks) / 10'000'000.0, memory.WorkingSetSize};
+        }
+#endif
 
     private:
         void stop() noexcept
@@ -330,7 +379,7 @@ export namespace meowlive::tests
         {
             meowlive::tests::process::write_server_config(directory_.path, port_, rust,
                                                           authenticated, locked);
-            child_.start(std::filesystem::canonical(executable), directory_.path, rust);
+            child_.start(executable, directory_.path, "server.toml", !rust);
         }
 
         ~ServerProcess()

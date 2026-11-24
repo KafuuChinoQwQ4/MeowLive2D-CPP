@@ -43,5 +43,5 @@ if is_plat("linux", "windows") then
 end
 
 if is_plat("windows") then
-    includes("libs/desktop-runtime", "apps/desktop")
+    includes("libs/desktop-runtime", "apps/desktop", "tests/benchmarks")
 end

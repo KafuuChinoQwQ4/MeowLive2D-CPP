@@ -18,4 +18,4 @@ integration/  # 服务、数据库及桌面端之间的联动验证
 
 内容变更会刷新所在目录及祖先目录的索引指纹。运行 `npm run tree:check` 检查索引是否最新。
 
-<!-- directory-tree-sha256: 6db4e8d91ca5cd32e2febb89186e3eea19cbdac7b0448681b16e6a805e47d1fe -->
+<!-- directory-tree-sha256: 014af3d84e7fc7bcfa75e6b5ec544de75510c1489d4b0171da0f192f0cdc009a -->
