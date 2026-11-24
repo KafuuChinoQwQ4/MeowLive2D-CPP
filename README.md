@@ -18,6 +18,21 @@ Windows 构建同时包含 `meowlive-server` 和 `meowlive-desktop`。从 WSL2 �
 
 两端通过命名模块导入共享协议。Windows 目标通过标准库头文件使用 MSVC STL，Linux 服务端的相关模块使用 `import std;`。
 
+## 测试
+
+从项目根目录运行 C++ 协议契约测试和进程联调。联调会启动本机 C++ 服务，验证 HTTP、鉴权及双 WebSocket。
+
+```sh
+xmake test 'meowlive-protocol-contracts/protocol_v3' 'meowlive-transport-integration/stage_2_transport'
+```
+
+可将同一联调用于旧版 Rust 主服务。
+
+```sh
+xmake build meowlive-transport-integration
+xmake run meowlive-transport-integration --rust ../MeowLive2D/target/debug/meowlive-server
+```
+
 ## 本机连接
 
 服务默认监听 `127.0.0.1:19601`，从 Windows 的 `%LOCALAPPDATA%\MeowLive2D\server.toml` 读取配置。可用 `--data-dir`、`MEOWLIVE_DATA_DIR` 指定数据目录，用 `--config` 指定 TOML。日志和上传暂存目录位于数据目录内。桌面端可通过 `MEOWLIVE_SERVER_URL` 指定服务地址。开启鉴权后，桌面端使用设备凭据建立双通道，管理员在窗口中单独登录。[服务配置样例](config/server.example.toml)

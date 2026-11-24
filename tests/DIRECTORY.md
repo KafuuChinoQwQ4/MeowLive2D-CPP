@@ -20,4 +20,4 @@ tests/  # 跨模块的协议和集成验证
 
 内容变更会刷新所在目录及祖先目录的索引指纹。运行 `npm run tree:check` 检查索引是否最新。
 
-<!-- directory-tree-sha256: 5e7c3a72728639a205e4845da9ae8722c71f437e67994ba5e2c3b2d537ff7180 -->
+<!-- directory-tree-sha256: 055f90ce70e6876c0ec5eade17aac0fc991d0e103e663d41ad7e4db684993aa9 -->

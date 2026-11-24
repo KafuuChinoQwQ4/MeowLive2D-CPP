@@ -93,8 +93,11 @@
     "tests/contracts/protocol_v3.cpp": "Rust v3 样本和 C++ 控制、资源、PCM 契约测试",
     "tests/contracts/xmake.lua": "跨端协议契约测试目标",
     "tests/integration": "服务、数据库及桌面端之间的联动验证",
-    "tests/integration/stage_2_transport.py": "C++ 与 Rust 主服务的 HTTP 和 WebSocket 进程联调",
+    "tests/integration/server_process.cppm": "测试服务的临时数据目录、配置和子进程管理",
+    "tests/integration/stage_2_transport.cpp": "C++ 与 Rust 主服务的原生 HTTP 和 WebSocket 进程联调",
     "tests/integration/stage_2_windows.ps1": "同机 Windows 上的 Qt 和 Rust 执行端配对与重连验证",
+    "tests/integration/transport_client.cppm": "回环 HTTP 与 WebSocket 集成测试客户端",
+    "tests/integration/xmake.lua": "本机服务传输层的原生集成测试目标",
     "xmake.lua": "C++26 工程入口，配置跨平台主服务和 Windows 桌面端"
   }
 }

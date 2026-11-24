@@ -39,7 +39,7 @@ if is_plat("linux", "windows") then
     add_requires("jsoncpp 1.9.6", "toml++ v3.4.0", {system = false})
     add_requireconfs("drogon.jsoncpp", "drogon.zlib", {system = false})
     includes("libs/domain", "libs/application", "libs/agent", "adapters", "apps/server")
-    includes("tests/contracts")
+    includes("tests/contracts", "tests/integration")
 end
 
 if is_plat("windows") then
