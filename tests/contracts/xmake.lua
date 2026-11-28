@@ -4,3 +4,28 @@ target("meowlive-protocol-contracts")
     add_files("protocol_v3.cpp")
     add_deps("meowlive-protocol")
     add_tests("protocol_v3")
+
+target("meowlive-llm-provider-contracts")
+    set_kind("binary")
+    set_default(false)
+    add_files("llm_providers.cpp")
+    add_deps("meowlive-adapters")
+    add_packages("drogon")
+    add_tests("llm_providers", {run_timeout = 30000})
+
+target("meowlive-bilibili-contracts")
+    set_kind("binary")
+    set_default(false)
+    add_files("bilibili_live.cpp")
+    add_deps("meowlive-adapters")
+    add_packages("drogon")
+    add_tests("bilibili_live", {run_timeout = 15000})
+
+if is_plat("windows") then
+    target("meowlive-update-contracts")
+        set_default(false)
+        add_rules("qt.console")
+        add_files("windows_update.cpp", "../../apps/desktop/update/manifest.cppm")
+        add_packages("libsodium")
+        add_tests("windows_update")
+end

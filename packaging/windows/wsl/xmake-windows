@@ -1,0 +1,73 @@
+#!/usr/bin/env python3
+
+import fcntl
+import hashlib
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+import tempfile
+
+
+def xmake_program_directory(config_dir, environment):
+    probe = """
+local version = xmake.version()
+print(version:shortstr())
+print(version:rawstr())
+print(os.programdir())
+"""
+    version, revision, program_dir = subprocess.check_output(
+        ["xmake", "lua", "-c", probe], env=environment, text=True
+    ).splitlines()
+    if version != "3.1.2":
+        return program_dir
+
+    builder_path = Path("rules/c++/modules/builder.lua")
+    builder = (Path(program_dir) / builder_path).read_bytes()
+    original = b"local build = should_build(from, module)"
+    fixed = b"local build = should_build(from, assert(mapper.get(from, key)))"
+    if builder.count(original) != 1:
+        return program_dir
+
+    # Use the producer's BMI paths and build phase for reused modules.
+    patched = builder.replace(original, fixed)
+    consumer_phase = (
+        b'local moduletype = support.has_two_phase_compilation_support(target) and "bmi" or "onephase"\n'
+        b"    for dep_name, dep in pairs(module.deps) do"
+    )
+    dependency_job = b"dep_jobname = _get_module_buildfilejob_for(reused and from or target, dep_sourcefile, moduletype)"
+    if consumer_phase in patched and dependency_job in patched:
+        patched = patched.replace(consumer_phase, b"for dep_name, dep in pairs(module.deps) do", 1)
+        patched = patched.replace(
+            dependency_job,
+            b'local owner = reused and from or target\n'
+            b'            local phase = support.has_two_phase_compilation_support(owner) and "bmi" or "onephase"\n'
+            b'            dep_jobname = _get_module_buildfilejob_for(owner, dep_sourcefile, phase)',
+            1,
+        )
+    digest = hashlib.sha256(os.fsencode(program_dir) + revision.encode() + patched).hexdigest()[:16]
+    overlay = config_dir / ("xmake-3.1.2-" + digest)
+    config_dir.mkdir(parents=True, exist_ok=True)
+    with (config_dir / "xmake-program.lock").open("a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        if not overlay.is_dir():
+            with tempfile.TemporaryDirectory(dir=config_dir) as staging:
+                copied_program = Path(staging) / "program"
+                shutil.copytree(program_dir, copied_program)
+                (copied_program / builder_path).write_bytes(patched)
+                copied_program.rename(overlay)
+    return str(overlay)
+
+
+def main():
+    root = Path(__file__).resolve().parents[3]
+    config_dir = root / ".xmake" / "windows"
+    environment = dict(os.environ, XMAKE_CONFIGDIR=str(config_dir))
+    os.chdir(root)
+    environment["XMAKE_PROGRAM_DIR"] = xmake_program_directory(config_dir, environment)
+    os.execvpe("xmake", ["xmake", *sys.argv[1:]], environment)
+
+
+if __name__ == "__main__":
+    main()

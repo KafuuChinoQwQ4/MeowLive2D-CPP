@@ -1,5 +1,6 @@
 .git/
 .xmake/
+/.cache/
 build/
 compile_commands.json
 node_modules/

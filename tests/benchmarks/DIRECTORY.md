@@ -17,4 +17,4 @@ benchmarks/  # Windows 播报性能测量及测试替身
 
 内容变更会刷新所在目录及祖先目录的索引指纹。运行 `npm run tree:check` 检查索引是否最新。
 
-<!-- directory-tree-sha256: eaec299fe96e98c7d12f50e172bf6276710b76ee9c19f130328e2a0c493e8379 -->
+<!-- directory-tree-sha256: c04b5460087015e33edc0bb7d3c8c81cc5a2332fa3d5c92e78134a4c66b9bb22 -->

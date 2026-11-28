@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 
 const tool = fileURLToPath(new URL("./directory-tree.mjs", import.meta.url));
 
-test("逐目录生成索引，检查内容变化，跳过 Xmake 和本地 SDK 产物", (t) => {
+test("逐目录生成索引，检查内容变化，跳过 Xmake、clangd 和本地 SDK 产物", (t) => {
   const root = mkdtempSync(path.join(tmpdir(), "meowlive-tree-"));
   t.after(() => rmSync(root, { recursive: true, force: true }));
   function write(name, text) {
@@ -24,7 +24,8 @@ test("逐目录生成索引，检查内容变化，跳过 Xmake 和本地 SDK �
     scripts: "工具", "scripts/directory-descriptions.json": "用途登记",
   } }));
   write("apps/server/main.cpp", "int main() {}\n");
-  for (const dir of ["build", ".xmake", "data/sdk"]) write(dir + "/artifact", "");
+  const generatedDirectories = ["build", ".xmake", ".cache/clangd/index", "data/sdk"];
+  for (const dir of generatedDirectories) write(dir + "/artifact", "");
   write("compile_commands.json", "[]");
   assert.equal(run("--write").status, 0);
   const rootIndex = readFileSync(path.join(root, "DIRECTORY.md"), "utf8");
@@ -38,7 +39,7 @@ test("逐目录生成索引，检查内容变化，跳过 Xmake 和本地 SDK �
   assert.doesNotMatch(appsIndex, /main\.cpp/);
   assert.match(serverIndex, /^└── main\.cpp  # 主入口$/m);
   assert.equal(run("--check").status, 0);
-  for (const dir of ["build", ".xmake", "data/sdk"]) {
+  for (const dir of generatedDirectories) {
     assert.equal(existsSync(path.join(root, dir, "DIRECTORY.md")), false);
   }
   write("apps/server/main.cpp", "int main() { return 0; }\n");

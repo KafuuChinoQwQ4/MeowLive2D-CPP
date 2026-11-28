@@ -24,4 +24,4 @@ desktop-runtime/  # Windows 的设备与直播软件执行能力
 
 内容变更会刷新所在目录及祖先目录的索引指纹。运行 `npm run tree:check` 检查索引是否最新。
 
-<!-- directory-tree-sha256: 38e1b401137a55d039526105b7e0fcc6c084595e562b24928277e1790fe190bb -->
+<!-- directory-tree-sha256: f4edad03990a73cd57a76f54089c3e58ebcf81c1a0d666e761bc690537fcabe7 -->

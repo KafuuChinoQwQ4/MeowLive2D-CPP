@@ -1,3 +1,6 @@
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <windows.h>
 #include <drogon/utils/Utilities.h>
 #include <json/json.h>
 
@@ -164,6 +167,10 @@ namespace
         server.start(server_exe, directory.path, "server.toml");
         wait_health(port, server, nullptr);
         const auto healthy = Clock::now();
+        const auto url = std::format(L"http://127.0.0.1:{}", port);
+        require(::SetEnvironmentVariableW(L"MEOWLIVE_SERVER_URL", url.c_str()) &&
+                    ::SetEnvironmentVariableW(L"MEOWLIVE_DATA_DIR", directory.path.c_str()),
+                "Cannot set the isolated execution endpoint");
         client.start(client_exe, directory.path, "desktop.toml", false, "client.log");
         wait_health(port, server, &client);
         const auto paired = Clock::now();

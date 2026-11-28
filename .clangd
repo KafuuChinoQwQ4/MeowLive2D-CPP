@@ -1,0 +1,6 @@
+If:
+  PathMatch: apps/server/startup/bootstrap\.cppm
+Diagnostics:
+  # clangd 22 reports this for Drogon definitions loaded from the preamble and BMI.
+  # The same translation unit passes the matching clang-cl syntax check.
+  Suppress: [module_odr_violation_record]

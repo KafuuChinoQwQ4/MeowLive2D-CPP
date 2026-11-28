@@ -1,15 +1,20 @@
 #include <QApplication>
 #include <QByteArray>
+#include <QDir>
 #include <QFile>
 #include <QMessageBox>
 #include <QString>
 #include <QUrl>
 
+#include <filesystem>
 #include <optional>
 
+import meowlive.desktop.services.managed_server;
 import meowlive.desktop.services.server_client;
 import meowlive.desktop.ui.main_window;
 import meowlive.desktop_runtime.connection;
+import meowlive.desktop_runtime.obs.client;
+import meowlive.platform.exception_diagnostics;
 
 namespace
 {
@@ -57,7 +62,25 @@ namespace
 
 int main(int argc, char* argv[])
 {
+    meowlive::platform::install_terminate_handler();
     ::QApplication app(argc, argv);
+    auto data_directory = ::qEnvironmentVariable("MEOWLIVE_DATA_DIR");
+    const auto local_app_data = ::qEnvironmentVariable("LOCALAPPDATA");
+    if (data_directory.isEmpty() && !local_app_data.isEmpty())
+    {
+        data_directory = ::QDir(local_app_data).filePath(QStringLiteral("MeowLive2D"));
+    }
+    if (!data_directory.isEmpty())
+    {
+        const ::QDir data(data_directory);
+        if (data.mkpath(QStringLiteral("logs")))
+        {
+            const auto log =
+                data.absoluteFilePath(QStringLiteral("logs/meowlive-desktop.exceptions.log"));
+            meowlive::platform::open_exception_log(std::filesystem::path(log.toStdWString()));
+        }
+    }
+
     ::QUrl origin(
         ::qEnvironmentVariable("MEOWLIVE_SERVER_URL", QStringLiteral("http://127.0.0.1:19601")),
         ::QUrl::StrictMode);
@@ -76,12 +99,41 @@ int main(int argc, char* argv[])
 
     const auto token = read_device_token();
     meowlive::desktop::services::ServerClient server(origin);
-    meowlive::desktop::ui::MainWindow window(server);
-    meowlive::desktop_runtime::ServerConnection connection(origin, token.value_or(::QByteArray{}),
-                                                           [&window](const ::QString& status)
-                                                           {
-                                                               window.set_bridge(status);
-                                                           });
+    const auto obs_path =
+        data_directory.isEmpty()
+            ? ::QString{}
+            : ::QDir(data_directory).filePath(QStringLiteral("desktop.obs.local.json"));
+    meowlive::desktop_runtime::obs::Client obs(obs_path);
+    meowlive::desktop::ui::MainWindow window(server, obs, data_directory);
+    meowlive::desktop_runtime::ServerConnection connection(
+        origin, token.value_or(::QByteArray{}),
+        [&window](const ::QString& status)
+        {
+            window.set_bridge(status);
+        },
+        &obs, &window.avatar_presentation());
+    window.set_mouth_source(
+        [&connection]
+        {
+            return connection.mouth_level();
+        });
+
+    meowlive::desktop::services::ManagedServer managed(
+        origin,
+        [&window](const ::QString& status, bool retryable)
+        {
+            window.set_managed_server(status, retryable);
+        });
+    if (!::qEnvironmentVariableIsSet("MEOWLIVE_SERVER_URL"))
+    {
+        window.enable_updates(managed, data_directory);
+        window.set_server_retry(
+            [&managed]
+            {
+                managed.start();
+            });
+        managed.start();
+    }
 
     window.show();
     if (token)

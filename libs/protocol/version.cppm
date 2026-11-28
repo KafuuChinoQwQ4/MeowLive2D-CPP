@@ -1,14 +1,10 @@
 module;
 
-#if defined(_WIN32)
-#include <cstdint>
-#endif
+#include <meowlive/msvc_stl.hpp>
 
 export module meowlive.protocol.version;
 
-#if !defined(_WIN32)
-import std;
-#endif
+import meowlive.standard;
 
 export namespace meowlive::protocol
 {

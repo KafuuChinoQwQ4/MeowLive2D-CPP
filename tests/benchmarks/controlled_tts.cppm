@@ -5,33 +5,18 @@ module;
 #include <drogon/HttpResponse.h>
 #include <drogon/utils/Utilities.h>
 
-#if defined(_WIN32)
-#include <array>
-#include <chrono>
-#include <cmath>
-#include <cstdint>
-#include <exception>
-#include <filesystem>
-#include <functional>
-#include <future>
-#include <memory>
-#include <numbers>
-#include <stdexcept>
-#include <string>
-#include <string_view>
-#include <thread>
-#endif
+#include <meowlive/msvc_stl.hpp>
 
 export module meowlive.tests.controlled_tts;
 
-#if !defined(_WIN32)
-import std;
-#endif
+import meowlive.standard;
 import meowlive.protocol.json;
 
 export namespace meowlive::tests
 {
     inline constexpr std::string_view playback_text = "跨端闭环";
+    inline constexpr std::string_view delayed_playback_text = "等待合成";
+    inline constexpr std::string_view invalid_wave_text = "损坏音频";
 }
 
 namespace meowlive::tests
@@ -95,6 +80,66 @@ namespace meowlive::tests
         }
         return response;
     }
+
+    struct SpeechFixture
+    {
+        explicit SpeechFixture(const std::filesystem::path& file) : reference(file)
+        {
+        }
+
+        const std::filesystem::path reference;
+        std::function<void()> release;
+        std::atomic<bool> delayed{};
+
+        bool valid_reference(const ::Json::Value& value) const
+        {
+            if (!value.isString())
+            {
+                return false;
+            }
+            const auto path = value.asString();
+            return std::filesystem::path(std::u8string(path.begin(), path.end())) == reference;
+        }
+
+        void respond(const drogon::HttpRequestPtr& request, const std::string& wav,
+                     std::function<void(const drogon::HttpResponsePtr&)> callback)
+        {
+            auto response = drogon::HttpResponse::newHttpResponse();
+            const auto payload = meowlive::protocol::json::parse_object(request->body());
+            if (request->path() != "/tts" || !payload || !(*payload)["text"].isString() ||
+                !valid_reference((*payload)["ref_audio_path"]) ||
+                (*payload)["prompt_text"] != meowlive::tests::playback_text.data() ||
+                (*payload)["prompt_lang"] != "zh" || (*payload)["text_lang"] != "zh" ||
+                (*payload)["media_type"] != "wav")
+            {
+                response->setStatusCode(drogon::k400BadRequest);
+                callback(response);
+                return;
+            }
+
+            const auto& text = (*payload)["text"];
+            response->setStatusCode(drogon::k200OK);
+            response->setContentTypeString("audio/wav");
+            if (text == meowlive::tests::invalid_wave_text.data())
+            {
+                response->setBody("invalid wave");
+            }
+            else
+            {
+                response->setBody(wav);
+            }
+            if (text == meowlive::tests::delayed_playback_text.data() && !release)
+            {
+                release = [response, callback = std::move(callback)]
+                {
+                    callback(response);
+                };
+                delayed.store(true);
+                return;
+            }
+            callback(response);
+        }
+    };
 }
 
 export namespace meowlive::tests
@@ -102,8 +147,12 @@ export namespace meowlive::tests
     class ControlledTts
     {
     public:
-        explicit ControlledTts(const std::filesystem::path& scratch_directory)
-            : wav_(std::make_shared<const std::string>(meowlive::tests::fixture_wav()))
+        explicit ControlledTts(const std::filesystem::path& scratch_directory,
+                               const std::filesystem::path& reference_file = {})
+            : wav_(std::make_shared<const std::string>(meowlive::tests::fixture_wav())),
+              speech_(reference_file.empty()
+                          ? nullptr
+                          : std::make_shared<meowlive::tests::SpeechFixture>(reference_file))
         {
             auto ready = std::make_shared<std::promise<std::uint16_t>>();
             auto started = ready->get_future();
@@ -120,10 +169,18 @@ export namespace meowlive::tests
                 .addListener("127.0.0.1", 0);
             app.registerHandlerViaRegex(
                 "/.*",
-                [wav = wav_](const drogon::HttpRequestPtr& request,
-                             std::function<void(const drogon::HttpResponsePtr&)>&& callback)
+                [wav = wav_,
+                 speech = speech_](const drogon::HttpRequestPtr& request,
+                                   std::function<void(const drogon::HttpResponsePtr&)>&& callback)
                 {
-                    callback(meowlive::tests::fixture_response(request, *wav));
+                    if (speech)
+                    {
+                        speech->respond(request, *wav, std::move(callback));
+                    }
+                    else
+                    {
+                        callback(meowlive::tests::fixture_response(request, *wav));
+                    }
                 },
                 {drogon::Post});
             app.registerBeginningAdvice(
@@ -181,6 +238,24 @@ export namespace meowlive::tests
             return *wav_;
         }
 
+        bool has_delayed_response() const
+        {
+            return speech_ && speech_->delayed.load();
+        }
+
+        void release_delayed_response() const
+        {
+            drogon::app().getIOLoop(0)->queueInLoop(
+                [speech = speech_]
+                {
+                    if (auto release = std::exchange(speech->release, {}))
+                    {
+                        speech->delayed.store(false);
+                        release();
+                    }
+                });
+        }
+
     private:
         void stop()
         {
@@ -193,6 +268,7 @@ export namespace meowlive::tests
         }
 
         std::shared_ptr<const std::string> wav_;
+        std::shared_ptr<meowlive::tests::SpeechFixture> speech_;
         std::thread worker_;
         std::uint16_t port_{};
     };

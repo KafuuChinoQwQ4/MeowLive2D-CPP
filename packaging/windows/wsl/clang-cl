@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Xmake writes one argument per line in long response files on Linux.
+# clang-cl needs each option and its separate value on the same line.
+response_files=()
+arguments=()
+dependency_file=
+dependency_path_next=false
+trap 'if (( ${#response_files[@]} )); then rm -f -- "${response_files[@]}"; fi' EXIT
+for argument in "$@"; do
+    if "$dependency_path_next"; then
+        dependency_file=${argument#/clang:}
+        dependency_path_next=false
+    elif [[ "$argument" == /clang:-MF ]]; then
+        dependency_path_next=true
+    fi
+    if [[ "$argument" == @* && -f "${argument:1}" ]]; then
+        response_source=${argument:1}
+        # Xmake also puts the two dependency options on separate lines in long commands.
+        response_dependency=$(sed -n '/^\/clang:-MF\r*$/ { n; s/\r$//; s/^"\(.*\)"$/\1/; s|^/clang:||p; }' "$response_source")
+        if [[ -n "$response_dependency" ]]; then
+            dependency_file=$response_dependency
+        fi
+        response=$(mktemp)
+        response_files+=("$response")
+        tr '\r\n' '  ' < "$response_source" > "$response"
+        arguments+=("@$response")
+    else
+        arguments+=("$argument")
+    fi
+done
+
+"${MEOWLIVE_REAL_CLANG_CL:-/usr/bin/clang-cl}" "${arguments[@]}"
+
+# Xmake 3.1.2 reads these continuations as a dependency named '\'.
+if [[ -n "$dependency_file" && -f "$dependency_file" ]]; then
+    sed -i ':join; /\\$/ { N; s/\\\n/ /; b join; }' "$dependency_file"
+fi

@@ -4,6 +4,7 @@
   "scripts": {
     "tree:update": "node scripts/directory-tree.mjs --write",
     "tree:check": "node scripts/directory-tree.mjs --check",
-    "test:tooling": "node --test scripts/directory-tree.test.mjs"
+    "arch:check": "node scripts/check-module-dependencies.mjs",
+    "test:tooling": "npm run arch:check && node --test scripts/directory-tree.test.mjs tests/tooling/module-dependencies.test.mjs"
   }
 }

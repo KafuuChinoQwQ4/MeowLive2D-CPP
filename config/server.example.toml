@@ -2,6 +2,7 @@
 [server]
 listen_address = "127.0.0.1:19601"
 allowed_origins = ["http://127.0.0.1:1420", "http://localhost:1420", "http://tauri.localhost"]
+# Maximum unfinished work items in each HTTP queue, including the running item.
 queue_capacity = 8
 history_limit = 50
 
@@ -10,5 +11,77 @@ enabled = false
 admin_token_env = "MEOWLIVE_ADMIN_TOKEN"
 device_token_env = "MEOWLIVE_DEVICE_TOKEN"
 session_lifetime_seconds = 28800
+# When enabled, both credentials must be available and distinct before the server starts.
+# Each configured environment variable takes precedence over its file.
 # admin_token_file = "admin.token"
 # device_token_file = "device.token"
+
+[speech]
+# Windows GPT-SoVITS api_v2 endpoint.
+base_url = "http://127.0.0.1:9880"
+# Set a local WAV path and matching transcript to enable the default voice.
+# reference_audio = "resources/reference.wav"
+# prompt_text = "参考录音的实际文字"
+prompt_language = "zh"
+text_language = "zh"
+timeout_seconds = 300
+sentence_batch_size = 4
+
+[agent]
+# The Agent starts paused after each server restart.
+cooldown_ms = 30000
+proactive_enabled = false
+
+[llm]
+mode = "cloud"
+provider = "custom"
+api_format = "openai_chat"
+# Set the model through Qt or supply the base URL and model name here.
+# base_url = "http://127.0.0.1:11434/v1"
+# model = "local-model-name"
+api_key_env = "MEOWLIVE_LLM_API_KEY"
+timeout_seconds = 30
+max_tokens = 1024
+json_mode = true
+
+[live]
+enabled = false
+# Set the open platform application ID when configuring the source through TOML.
+app_id = 0
+access_key_id_env = "MEOWLIVE_BILIBILI_ACCESS_KEY_ID"
+access_key_secret_env = "MEOWLIVE_BILIBILI_ACCESS_KEY_SECRET"
+identity_code_env = "MEOWLIVE_BILIBILI_IDENTITY_CODE"
+reconnect_initial_ms = 1000
+reconnect_max_ms = 30000
+
+[viewers]
+enabled = false
+# Allow the model to request active memory summaries for this round's persisted viewer events.
+agent_memory = false
+calendar_offset_minutes = 480
+scope_id = "default-avatar"
+database_url_env = "MEOWLIVE_DATABASE_URL"
+# Absolute path to an installed Windows x64 libpq.dll or a path relative to server.toml.
+# libpq_path = "postgresql/bin/libpq.dll"
+# Installed packages provide the matching migrations in migrations/.
+# Specify a path relative to server.toml when running from a source build.
+# migrations_path = "migrations"
+
+[memory]
+# Optional OpenAI-compatible endpoint for background extraction from identified chat.
+enabled = false
+# endpoint = "http://127.0.0.1:11434/v1"
+# model = "memory-model-name"
+api_key_env = "MEOWLIVE_MEMORY_API_KEY"
+timeout_ms = 15000
+# Set both values to enable background embeddings, vector rebuilds and similarity ranking.
+# embedding_endpoint = "http://127.0.0.1:11434/v1"
+# embedding_model = "embedding-model-name"
+embedding_api_key_env = "MEOWLIVE_EMBEDDING_API_KEY"
+embedding_dimensions = 384
+
+[graph]
+enabled = false
+endpoint = "http://127.0.0.1:17474/db/neo4j/query/v2"
+user = "neo4j"
+password_env = "MEOWLIVE_NEO4J_PASSWORD"

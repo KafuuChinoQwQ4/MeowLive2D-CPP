@@ -1,20 +1,6 @@
-#if defined(_WIN32)
-#include <algorithm>
-#include <array>
-#include <cstddef>
-#include <cstdint>
-#include <exception>
-#include <limits>
-#include <print>
-#include <ranges>
-#include <stdexcept>
-#include <string>
-#include <string_view>
-#include <variant>
-#include <vector>
-#else
-import std;
-#endif
+#include <meowlive/msvc_stl.hpp>
+
+import meowlive.standard;
 
 import meowlive.protocol.control;
 
@@ -80,28 +66,48 @@ namespace
             meowlive::protocol::decode_client_message(R"({"type":"hello","protocol_version":2})")
                 .has_value(),
             "transport owns hello protocol negotiation");
-        constexpr std::array<std::string_view, 9> invalid_clients{
+        constexpr std::array<std::string_view, 11> invalid_clients{
             R"({"type":"hello","protocol_version":65536})",
             R"({"type":"hello","protocol_version":-1})",
             R"({"type":"hello","protocol_version":3.0})",
+            R"({"type":"hello","protocol_version":03})",
             R"({"type":"hello","protocol_version":"3"})",
             R"({"type":"hello","protocol_version":3,"protocol_version":4})",
             R"({"type":"hello","protocol_version":3}{})",
             R"({"type":"receipt","receipt":{"error":0,"status":"started","utterance_id":"x","generation":0}})",
             R"({"type":"receipt","receipt":{"status":"unknown","utterance_id":"x","generation":0}})",
             R"({"type":"receipt","receipt":{"status":"started","utterance_id":"\udc00","generation":0}})",
+            R"({"type":"receipt","receipt":{"status":"started","utterance_id":"\ud800\u0020","generation":0}})",
         };
         for (const auto input : invalid_clients)
         {
             require(!meowlive::protocol::decode_client_message(input),
                     "invalid client message accepted");
         }
+        const auto unicode_receipt = meowlive::protocol::decode_client_message(
+            R"({"type":"receipt","receipt":{"status":"started","utterance_id":"\ud83d\udc08","generation":0}})");
+        require(unicode_receipt &&
+                    std::get<meowlive::protocol::ExecutionReceipt>(*unicode_receipt).utterance_id ==
+                        "\xf0\x9f\x90\x88",
+                "Valid JSON surrogate pair did not decode to UTF-8");
         require(!meowlive::protocol::decode_server_command(
                     R"({"type":"stop","generation":4294967296})"),
                 "server generation overflow accepted");
         require(!meowlive::protocol::decode_server_command(
                     R"({"type":"speak","generation":0,"format":[]})"),
                 "invalid server audio format accepted");
+    }
+
+    void check_json_depth()
+    {
+        const auto opening = R"({"type":"stop","generation":1,"extra":)" + std::string(127, '[');
+        const auto closing = std::string(127, ']') + '}';
+        require(meowlive::protocol::decode_server_command(opening + closing).has_value(),
+                "empty JSON container at depth limit");
+        require(!meowlive::protocol::decode_server_command(opening + '0' + closing),
+                "JSON value beyond depth limit accepted");
+        require(!meowlive::protocol::decode_server_command(opening + '}' + closing.substr(1)),
+                "mismatched JSON delimiter at depth limit accepted");
     }
 
     void check_resources()
@@ -237,6 +243,7 @@ int main()
     try
     {
         check_control();
+        check_json_depth();
         check_resources();
         check_audio();
         return 0;

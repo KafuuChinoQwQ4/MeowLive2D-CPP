@@ -6,6 +6,7 @@ MeowLive2D 的 C++ 重构工程
 
 ```text
 MeowLive2D-cpp/  # MeowLive2D 的 C++ 重构工程
+├── .vscode/  # 项目的 VS Code 设置
 ├── adapters/  # 实现应用接口的外部服务适配器
 ├── apps/  # 服务端与桌面端程序入口
 ├── config/  # 可发布的服务端和桌面端配置模板
@@ -15,6 +16,7 @@ MeowLive2D-cpp/  # MeowLive2D 的 C++ 重构工程
 ├── scripts/  # 开发与目录索引工具
 ├── tests/  # 跨模块的协议和集成验证
 ├── .clang-format  # 项目 C++ 源码与命名模块的 Allman 格式规则
+├── .clangd  # 限定 Drogon 模块在 clangd 中的已知误报范围
 ├── .gitignore  # 排除构建产物、本地文档、SDK、运行数据和私有配置
 ├── AGENTS.md  # 项目协作规则、C++ 编码约定与格式风格
 ├── DIRECTORY.md  # 本目录的直属文件与子目录索引（自动生成）
@@ -25,6 +27,7 @@ MeowLive2D-cpp/  # MeowLive2D 的 C++ 重构工程
 
 ## 子目录索引
 
+- [.vscode/](.vscode/DIRECTORY.md)
 - [adapters/](adapters/DIRECTORY.md)
 - [apps/](apps/DIRECTORY.md)
 - [config/](config/DIRECTORY.md)
@@ -38,4 +41,4 @@ MeowLive2D-cpp/  # MeowLive2D 的 C++ 重构工程
 
 内容变更会刷新所在目录及祖先目录的索引指纹。运行 `npm run tree:check` 检查索引是否最新。
 
-<!-- directory-tree-sha256: 998b2132aaaeeeb6e4cca54538e4ed8b9342ad8bbda24120e254828699a0acfb -->
+<!-- directory-tree-sha256: 7b579657154b54ac9605a872c4b274beec80166bd41dffb46f58f35e3893cd45 -->

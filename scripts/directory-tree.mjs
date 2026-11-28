@@ -11,7 +11,7 @@ const outputs = [];
 
 function excluded(relative, name) {
   return excludedDirectories.has(name)
-    || ["data", "logs", "config/local"].includes(relative)
+    || [".cache", "data", "logs", "config/local"].includes(relative)
     || relative === "agent.md"
     || name === "compile_commands.json"
     || (/^\.env(?:\.|$)/.test(name) && name !== ".env.example")
